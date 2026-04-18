@@ -1,0 +1,132 @@
+[
+  {
+    "titel": "Waterkringloop mindmap",
+    "vak": "Biologie",
+    "doelgroep": "Onderbouw VO",
+    "leerdoel": "Leerlingen kunnen de stappen van de waterkringloop benoemen.",
+    "beschrijving": "Leerlingen maken in tweetallen een mindmap over de waterkringloop en lichten daarna de onderdelen klassikaal toe.",
+    "stappen": [
+      "Bekijk een korte introductievideo over de waterkringloop.",
+      "Maak samen een mindmap met begrippen als verdamping, condensatie en neerslag.",
+      "Presenteer de mindmap aan de klas."
+    ],
+    "materialen": ["Papier", "Stiften", "Video"]
+  },
+  {
+    "titel": "Schema van de waterkringloop",
+    "vak": "Biologie",
+    "doelgroep": "Onderbouw VO",
+    "leerdoel": "Leerlingen leggen uit hoe water verdampt, condenseert en terugvalt als neerslag.",
+    "beschrijving": "De klas maakt een overzichtelijk schema van de waterkringloop en bespreekt daarna de fasen in groepjes.",
+    "stappen": [
+      "Lees een korte uitleg over de waterkringloop.",
+      "Teken individueel of in tweetallen een schema met de belangrijkste stappen.",
+      "Bespreek het schema met een groepje."
+    ],
+    "materialen": ["Werkblad", "Potlood", "Boektekst"]
+  },
+  {
+    "titel": "Poster gezonde voeding",
+    "vak": "Biologie",
+    "doelgroep": "Onderbouw VO",
+    "leerdoel": "Leerlingen herkennen kenmerken van gezonde voeding.",
+    "beschrijving": "Studenten ontwerpen een poster over gezonde voeding met voorbeelden uit de Schijf van Vijf.",
+    "stappen": [
+      "Bestudeer informatie over gezonde voeding.",
+      "Kies voedingsproducten uit verschillende categorieën.",
+      "Maak een informatieve poster."
+    ],
+    "materialen": ["Posterpapier", "Tijdschriften", "Lijm"]
+  },
+  {
+    "titel": "Tekst lezen over klimaatverandering",
+    "vak": "Aardrijkskunde",
+    "doelgroep": "Bovenbouw VO",
+    "leerdoel": "Leerlingen beschrijven oorzaken en gevolgen van klimaatverandering.",
+    "beschrijving": "Leerlingen lezen een tekst over klimaatverandering en beantwoorden daarna inhoudelijke vragen.",
+    "stappen": [
+      "Lees de tekst individueel.",
+      "Markeer belangrijke oorzaken en gevolgen.",
+      "Beantwoord de verwerkingsvragen."
+    ],
+    "materialen": ["Tekstblad", "Pen"]
+  },
+  {
+    "titel": "Opdrachten bij klimaatverandering",
+    "vak": "Aardrijkskunde",
+    "doelgroep": "Bovenbouw VO",
+    "leerdoel": "Leerlingen analyseren oorzaken en gevolgen van klimaatverandering.",
+    "beschrijving": "De leerlingen bestuderen een tekst over klimaatverandering en maken daarna opdrachten over de inhoud.",
+    "stappen": [
+      "Lees de aangeleverde tekst.",
+      "Bespreek kernbegrippen met een klasgenoot.",
+      "Maak de opdrachten in het werkboek."
+    ],
+    "materialen": ["Werkboek", "Tekstblad"]
+  },
+  {
+    "titel": "Discussie Tweede Wereldoorlog",
+    "vak": "Geschiedenis",
+    "doelgroep": "Bovenbouw VO",
+    "leerdoel": "Leerlingen kunnen oorzaken van de Tweede Wereldoorlog uitleggen.",
+    "beschrijving": "Leerlingen bespreken in groepjes de oorzaken van de Tweede Wereldoorlog en presenteren hun conclusies.",
+    "stappen": [
+      "Lees bronmateriaal over de aanloop naar de oorlog.",
+      "Bespreek oorzaken in kleine groepjes.",
+      "Presenteer de belangrijkste conclusies."
+    ],
+    "materialen": ["Bronnenblad", "Presentatiekaartjes"]
+  },
+  {
+    "titel": "Samenvatting fotosynthesevideo",
+    "vak": "Biologie",
+    "doelgroep": "Onderbouw VO",
+    "leerdoel": "Leerlingen kunnen uitleggen wat fotosynthese is.",
+    "beschrijving": "De klas maakt individueel een samenvatting van een video over fotosynthese.",
+    "stappen": [
+      "Bekijk een educatieve video.",
+      "Noteer kernbegrippen tijdens het kijken.",
+      "Schrijf een korte samenvatting."
+    ],
+    "materialen": ["Video", "Schrift", "Pen"]
+  },
+  {
+    "titel": "Practicum zuurgraad meten",
+    "vak": "Scheikunde",
+    "doelgroep": "Onderbouw VO",
+    "leerdoel": "Leerlingen leren de pH-waarde van verschillende vloeistoffen meten.",
+    "beschrijving": "Tijdens een practicum meten leerlingen de zuurgraad van verschillende vloeistoffen en verwerken de resultaten in een tabel.",
+    "stappen": [
+      "Verzamel verschillende vloeistoffen.",
+      "Meet de pH met indicatorpapier.",
+      "Zet de resultaten in een tabel en trek conclusies."
+    ],
+    "materialen": ["Indicatorpapier", "Bekers", "Werkblad"]
+  },
+  {
+    "titel": "Woordweb fotosynthese",
+    "vak": "Biologie",
+    "doelgroep": "Onderbouw VO",
+    "leerdoel": "Leerlingen benoemen de belangrijkste onderdelen van fotosynthese.",
+    "beschrijving": "Leerlingen maken een woordweb over fotosynthese op basis van een klassikale uitleg en hun boek.",
+    "stappen": [
+      "Luister naar de uitleg van de docent.",
+      "Lees het boekgedeelte over fotosynthese.",
+      "Maak een woordweb met de belangrijkste begrippen."
+    ],
+    "materialen": ["Boek", "Schrift", "Pen"]
+  },
+  {
+    "titel": "Schrijfopdracht boekverslag",
+    "vak": "Nederlands",
+    "doelgroep": "Bovenbouw VO",
+    "leerdoel": "Leerlingen schrijven een gestructureerd boekverslag.",
+    "beschrijving": "Leerlingen lezen een roman en schrijven daarna een boekverslag met aandacht voor thema, personages en mening.",
+    "stappen": [
+      "Lees de gekozen roman.",
+      "Maak aantekeningen over thema en personages.",
+      "Schrijf het boekverslag volgens een format."
+    ],
+    "materialen": ["Roman", "Format boekverslag"]
+  }
+]
