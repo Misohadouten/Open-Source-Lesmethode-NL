@@ -1,0 +1,38 @@
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Install Node.js for the frontend build
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y nodejs && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy project file
+COPY ["LessenHub.Backend/LessenHub.Backend.csproj", "LessenHub.Backend/"]
+COPY ["LessenHub.Frontend/package.json", "LessenHub.Frontend/"]
+COPY ["LessenHub.Frontend/package-lock.json", "LessenHub.Frontend/"]
+COPY ["LessenHub.Frontend/LessenHub.Frontend.esproj", "LessenHub.Frontend/"]
+RUN dotnet restore "LessenHub.Backend/LessenHub.Backend.csproj"
+
+# Copy the rest of the code
+COPY . .
+
+# Build the project
+WORKDIR "/src/LessenHub.Backend"
+RUN dotnet build "LessenHub.Backend.csproj" -c Release -o /app/build
+
+# Publish stage
+FROM build AS publish
+RUN dotnet publish "LessenHub.Backend.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+COPY --from=publish /app/publish .
+
+# Create a health check endpoint script
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "LessenHub.Backend.dll"]

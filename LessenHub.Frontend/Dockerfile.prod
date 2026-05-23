@@ -1,0 +1,38 @@
+# Build stage
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Build arguments for Next.js environment variables
+ARG NEXT_PUBLIC_API_URL=http://localhost:5001
+ARG NEXT_PUBLIC_BACKEND_URL=http://localhost:5001
+
+# Set as environment variables for the build
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_BACKEND_URL=${NEXT_PUBLIC_BACKEND_URL}
+
+# Copy package files
+COPY LessenHub.Frontend/package*.json ./
+RUN npm ci
+
+# Copy source code
+COPY LessenHub.Frontend .
+
+# Build the Next.js app
+RUN npm run build
+
+# Runtime stage
+FROM node:20-alpine
+WORKDIR /app
+
+# Copy package files
+COPY LessenHub.Frontend/package*.json ./
+RUN npm ci --production
+
+# Copy built app from builder
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+
+EXPOSE 3000
+ENV NODE_ENV=production
+
+CMD ["npm", "start"]

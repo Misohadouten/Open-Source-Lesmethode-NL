@@ -1,0 +1,10 @@
+<Solution>
+  <Project Path="LessenHub.Domain/LessenHub.Domain.csproj" />
+  <Project Path="LessenHub.Frontend/LessenHub.Frontend.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="LessenHub.Application/LessenHub.Application.csproj" />    
+  <Project Path="LessenHub.Backend/LessenHub.Backend.csproj" />
+  <Project Path="LessenHub.Infrastructure/LessenHub.Infrastructure.csproj" />
+</Solution>

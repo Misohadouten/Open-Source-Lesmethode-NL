@@ -1,0 +1,110 @@
+@startuml
+title LessenHub AI Architectuur (met Privacy, lokaal vs extern)
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+
+legend left
+  <|--  Extension (specialisatie)
+  <|..  Implementation (interface realisatie)
+  *--   Composition (onderdeel kan niet zonder geheel)
+  o--   Aggregation (onderdeel kan zelfstandig bestaan)
+  -->   Dependency (sterke afhankelijkheid)
+  ..>   Zwakke dependency
+endlegend
+
+package "Frontend (Browser)" {
+  class FEUpload as "Upload Page" <<frontend>>
+  class FEForm as "Lesson Form" <<frontend>>
+  FEUpload --> FEForm : vult velden
+}
+
+package "Lokaal: LessenHub Backend API" {
+  class LesAnalyseController <<local>>
+  interface IAiService <<local>>
+  class FallbackAiService <<local>>
+  class DocumentExtractorService <<local>>
+  class LesTemplateExtractorService <<local>>
+  class PrivacyRedactionService <<privacy>>
+  class ExceptionHandlingMiddleware <<local>>
+  class AuthMiddlewareOIDC <<privacy>>
+  class Serilog <<privacy>>
+  class MongoDB <<local>>
+
+  class RedactionRules <<privacy>>
+  PrivacyRedactionService *-- RedactionRules : redactie-regels
+
+  IAiService <|.. FallbackAiService
+  LesAnalyseController --> DocumentExtractorService : 1. extract raw text
+  LesAnalyseController --> PrivacyRedactionService : 2. redact PII (FIRST!)
+  LesAnalyseController --> LesTemplateExtractorService : 3. parsing redacted text
+  LesAnalyseController --> IAiService : 4. AI on redacted text
+
+  FallbackAiService o-- IAiService : provider-keten
+  LesAnalyseController --> Serilog : audit/logging
+  LesAnalyseController --> MongoDB : opslag lesdata
+  ExceptionHandlingMiddleware --> LesAnalyseController
+  AuthMiddlewareOIDC --> LesAnalyseController
+}
+
+package "Lokaal: AI Services" {
+  class AnthropicService <<local>>
+  class OpenAiService <<local>>
+  class GeminiService <<local>>
+
+  IAiService <|.. AnthropicService
+  IAiService <|.. OpenAiService
+  IAiService <|.. GeminiService
+
+  FallbackAiService ..> AnthropicService : try provider 1
+  FallbackAiService ..> OpenAiService : try provider 2
+  FallbackAiService ..> GeminiService : try provider 3
+}
+
+package "Extern: Cloud Services" {
+  class AnthropicApi <<external>>
+  class OpenAIApi <<external>>
+  class GeminiApi <<external>>
+  class SurfConextOIDC <<external>>
+}
+
+AnthropicService ..> AnthropicApi : HTTPS (redacted text)
+OpenAiService ..> OpenAIApi : HTTPS (redacted text)
+GeminiService ..> GeminiApi : HTTPS (redacted text)
+
+AuthMiddlewareOIDC ..> SurfConextOIDC : login/claims
+
+FEUpload --> LesAnalyseController : POST /LesAnalyse/analyseer (multipart)
+FEUpload --> AuthMiddlewareOIDC : session/cookies
+
+note right of DocumentExtractorService
+  Stage 1: Raw document → Plain text locally.
+  ⚠ Inhoud bevat nog PII/gevoelig data.
+  (Onmiddellijk geredacteerd in stap 2)
+end note
+
+note right of PrivacyRedactionService
+  PRIVACY-FIRST FLOW (stap 2):
+  - Email: voornaam@domain.nl -> [EMAIL]
+  - Telefoon: 06-12345678 -> [PHONE]
+  - IBAN: NL91AB1234567890 -> [IBAN]
+  - BSN: 123456789 -> [BSN]
+  - Postcode: 1234 AB -> [POSTCODE]
+  - PII-velden (Naam, Docent, etc) -> [REDACTED]
+  
+  Alle volgende stappen (parsing + AI) 
+  werken op geredacteerde tekst!
+end note
+
+note bottom of LesAnalyseController
+  Privacy-First Pipeline:
+  1. Extract raw text from file
+  2. Redact all PII IMMEDIATELY
+  3. Template extract from redacted text
+  4. AI analyse on redacted text
+  5. Merge both results
+  → MongoDB stores: redacted content only
+  → External AI always sees: redacted content
+end note
+
+@enduml

@@ -1,0 +1,179 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f9fafb;
+  --foreground: #111827;
+  --brand: #de9a5f;
+  --brand-hover: #cf8a4f;
+  --brand-muted: #f5ebe0;
+  --brand-text: #7a5c3a;
+  --approve: #16a34a;
+  --approve-hover: #15803d;
+  --approve-muted: #dcfce7;
+  --approve-text: #14532d;
+  --reject: #dc2626;
+  --reject-hover: #b91c1c;
+  --reject-muted: #fee2e2;
+  --reject-text: #7f1d1d;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand: var(--brand);
+  --color-brand-hover: var(--brand-hover);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer components {
+  .lh-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    border-radius: 0.5rem;
+    transition-property: color, background-color, border-color, box-shadow;
+    transition-duration: 150ms;
+  }
+
+  .lh-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px white, 0 0 0 4px rgb(228 174 126 / 0.45);
+  }
+
+  .lh-btn:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  .lh-btn-primary {
+    padding: 0.5rem 1rem;
+    background-color: var(--brand);
+    color: white;
+    box-shadow: 0 1px 3px rgb(207 138 79 / 0.35);
+  }
+
+  .lh-btn-primary:hover:not(:disabled) {
+    background-color: var(--brand-hover);
+  }
+
+  .lh-btn-secondary {
+    padding: 0.5rem 1rem;
+    background-color: white;
+    color: var(--brand-text);
+    border: 1px solid var(--brand);
+  }
+
+  .lh-btn-secondary:hover:not(:disabled) {
+    background-color: var(--brand-muted);
+  }
+
+  .lh-btn-ghost {
+    padding: 0.5rem 1rem;
+    background-color: transparent;
+    color: #4b5563;
+  }
+
+  .lh-btn-ghost:hover:not(:disabled) {
+    background-color: #f3f4f6;
+    color: #111827;
+  }
+
+  .lh-btn-danger {
+    padding: 0.5rem 1rem;
+    background-color: white;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+  }
+
+  .lh-btn-danger:hover:not(:disabled) {
+    background-color: #fef2f2;
+  }
+
+  .lh-btn-icon {
+    padding: 0.5rem;
+    background-color: white;
+    color: var(--brand-text);
+    border: 1px solid var(--brand);
+  }
+
+  .lh-btn-icon:hover:not(:disabled) {
+    background-color: var(--brand-muted);
+  }
+
+  .lh-input {
+    width: 100%;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: #111827;
+    background-color: white;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+  }
+
+  .lh-input:focus {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: 0 0 0 2px rgb(228 174 126 / 0.35);
+  }
+
+  .lh-page-title {
+    font-size: 1.875rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: #111827;
+  }
+
+  .lh-page-subtitle {
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: #4b5563;
+  }
+
+  .lh-dashboard-bg {
+    background:
+      radial-gradient(ellipse 70% 45% at 100% 0%, rgb(228 174 126 / 0.14), transparent 50%),
+      linear-gradient(180deg, #fbf7f2 0%, #f9fafb 100%);
+  }
+
+  .lh-btn-approve {
+    background-color: var(--approve);
+    color: white;
+    box-shadow: 0 1px 3px rgb(22 163 74 / 0.35);
+  }
+
+  .lh-btn-approve:hover:not(:disabled) {
+    background-color: var(--approve-hover);
+  }
+
+  .lh-btn-reject {
+    background-color: var(--reject);
+    color: white;
+    box-shadow: 0 1px 3px rgb(220 38 38 / 0.35);
+  }
+
+  .lh-btn-reject:hover:not(:disabled) {
+    background-color: var(--reject-hover);
+  }
+}

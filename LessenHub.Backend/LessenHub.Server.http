@@ -1,0 +1,23 @@
+@LessenHub.Server_HostAddress = https://localhost:7207
+
+GET {{LessenHub.Server_HostAddress}}/les/
+Accept: application/json
+###
+
+GET {{LessenHub.Server_HostAddress}}/docent/
+Accept: application/json
+###
+
+GET {{LessenHub.Server_HostAddress}}/docent/11111111-1111-1111-1111-111111111111
+Accept: application/json
+
+### Create Les
+POST {{LessenHub.Server_HostAddress}}/les/
+Content-Type: application/json
+{
+  "Titel": "Nieuwe Les",
+  "Inhoud" : "Test"
+}
+
+
+###

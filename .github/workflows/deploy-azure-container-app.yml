@@ -1,0 +1,369 @@
+name: Deploy To Azure Container Apps
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  AZURE_LOCATION: swedencentral
+  BACKEND_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/lessenhub-backend:${{ github.sha }}
+  FRONTEND_IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/lessenhub-frontend:${{ github.sha }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore LessenHub.slnx
+
+      - name: Build
+        run: dotnet build LessenHub.slnx --configuration Release --no-restore
+
+      - name: Run backend tests
+        run: dotnet test LessenHub.Backend.Tests/LessenHub.Backend.Tests.csproj --configuration Release --no-build
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build backend image
+        run: docker build -f LessenHub.Backend/Dockerfile.prod -t "$BACKEND_IMAGE_NAME" .
+
+      - name: Push backend image
+        run: docker push "$BACKEND_IMAGE_NAME"
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy backend Container App
+        id: deploy_backend
+        uses: azure/cli@v2
+        env:
+          AZURE_RG: ${{ secrets.AZURE_RG }}
+          AZURE_CONTAINERAPPS_ENV: ${{ secrets.AZURE_CONTAINERAPPS_ENV }}
+          AZURE_CONTAINER_APP: ${{ secrets.AZURE_CONTAINER_APP }}
+          GHCR_USERNAME: ${{ github.repository_owner }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          COSMOS_MONGO_CONNECTION_STRING: ${{ secrets.COSMOS_MONGO_CONNECTION_STRING }}
+          SURFCONEXT_AUTHORITY: ${{ secrets.SURFCONEXT_AUTHORITY }}
+          SURFCONEXT_CLIENT_ID: ${{ secrets.SURFCONEXT_CLIENT_ID }}
+          SURFCONEXT_CLIENT_SECRET: ${{ secrets.SURFCONEXT_CLIENT_SECRET }}
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            az extension add --name containerapp --upgrade --only-show-errors
+
+            REGISTRY_MSG="No GHCR_PAT set; assuming GHCR package is public."
+            if [[ -n "${GHCR_PAT:-}" ]]; then
+              REGISTRY_MSG="GHCR_PAT found; using authenticated GHCR pull."
+            fi
+            echo "$REGISTRY_MSG"
+
+            if [[ "$(az group exists --name "$AZURE_RG")" != "true" ]]; then
+              az group create \
+                --name "$AZURE_RG" \
+                --location "$AZURE_LOCATION" \
+                --only-show-errors
+            fi
+
+            if [[ "$(az containerapp env list -g "$AZURE_RG" --query "[?name=='$AZURE_CONTAINERAPPS_ENV'] | length(@)" -o tsv)" == "0" ]]; then
+              az containerapp env create \
+                --name "$AZURE_CONTAINERAPPS_ENV" \
+                --resource-group "$AZURE_RG" \
+                --location "$AZURE_LOCATION" \
+                --only-show-errors
+            fi
+
+            APP_EXISTS="$(az containerapp list -g "$AZURE_RG" --query "[?name=='$AZURE_CONTAINER_APP'] | length(@)" -o tsv)"
+
+            if [[ "$APP_EXISTS" != "0" ]]; then
+              APP_PROVISIONING_STATE="$(az containerapp show -g "$AZURE_RG" -n "$AZURE_CONTAINER_APP" --query "properties.provisioningState" -o tsv)"
+              if [[ "$APP_PROVISIONING_STATE" == "Failed" ]]; then
+                echo "Container app is in Failed provisioning state; deleting and recreating."
+                az containerapp delete \
+                  --name "$AZURE_CONTAINER_APP" \
+                  --resource-group "$AZURE_RG" \
+                  --yes \
+                  --only-show-errors
+                APP_EXISTS="0"
+              fi
+            fi
+
+            if [[ "$APP_EXISTS" == "0" ]]; then
+              if [[ -n "${GHCR_PAT:-}" ]]; then
+                az containerapp create \
+                  --name "$AZURE_CONTAINER_APP" \
+                  --resource-group "$AZURE_RG" \
+                  --environment "$AZURE_CONTAINERAPPS_ENV" \
+                  --image "$BACKEND_IMAGE_NAME" \
+                  --registry-server ghcr.io \
+                  --registry-username "$GHCR_USERNAME" \
+                  --registry-password "$GHCR_PAT" \
+                  --ingress external \
+                  --target-port 8080 \
+                  --cpu 0.25 \
+                  --memory 0.5Gi \
+                  --min-replicas 0 \
+                  --max-replicas 1 \
+                  --secrets \
+                    mongo-conn="$COSMOS_MONGO_CONNECTION_STRING" \
+                    surf-client-secret="$SURFCONEXT_CLIENT_SECRET" \
+                  --env-vars \
+                    ASPNETCORE_ENVIRONMENT=Production \
+                    ASPNETCORE_URLS=http://+:8080 \
+                    MongoDB__ConnectionString=secretref:mongo-conn \
+                    MongoDB__DatabaseName=lessenhubdb \
+                    SurfConext__Authority="$SURFCONEXT_AUTHORITY" \
+                    SurfConext__ClientId="$SURFCONEXT_CLIENT_ID" \
+                    SurfConext__ClientSecret=secretref:surf-client-secret \
+                    Frontend__Url=https://placeholder.example \
+                  --only-show-errors
+              else
+                az containerapp create \
+                  --name "$AZURE_CONTAINER_APP" \
+                  --resource-group "$AZURE_RG" \
+                  --environment "$AZURE_CONTAINERAPPS_ENV" \
+                  --image "$BACKEND_IMAGE_NAME" \
+                  --ingress external \
+                  --target-port 8080 \
+                  --cpu 0.25 \
+                  --memory 0.5Gi \
+                  --min-replicas 0 \
+                  --max-replicas 1 \
+                  --secrets \
+                    mongo-conn="$COSMOS_MONGO_CONNECTION_STRING" \
+                    surf-client-secret="$SURFCONEXT_CLIENT_SECRET" \
+                  --env-vars \
+                    ASPNETCORE_ENVIRONMENT=Production \
+                    ASPNETCORE_URLS=http://+:8080 \
+                    MongoDB__ConnectionString=secretref:mongo-conn \
+                    MongoDB__DatabaseName=lessenhubdb \
+                    SurfConext__Authority="$SURFCONEXT_AUTHORITY" \
+                    SurfConext__ClientId="$SURFCONEXT_CLIENT_ID" \
+                    SurfConext__ClientSecret=secretref:surf-client-secret \
+                    Frontend__Url=https://placeholder.example \
+                  --only-show-errors
+              fi
+            else
+              az containerapp secret set \
+                --name "$AZURE_CONTAINER_APP" \
+                --resource-group "$AZURE_RG" \
+                --secrets \
+                  mongo-conn="$COSMOS_MONGO_CONNECTION_STRING" \
+                  surf-client-secret="$SURFCONEXT_CLIENT_SECRET" \
+                --only-show-errors
+
+              if [[ -n "${GHCR_PAT:-}" ]]; then
+                az containerapp registry set \
+                  --name "$AZURE_CONTAINER_APP" \
+                  --resource-group "$AZURE_RG" \
+                  --server ghcr.io \
+                  --username "$GHCR_USERNAME" \
+                  --password "$GHCR_PAT" \
+                  --only-show-errors
+
+                az containerapp update \
+                  --name "$AZURE_CONTAINER_APP" \
+                  --resource-group "$AZURE_RG" \
+                  --image "$BACKEND_IMAGE_NAME" \
+                  --set-env-vars \
+                    ASPNETCORE_ENVIRONMENT=Production \
+                    ASPNETCORE_URLS=http://+:8080 \
+                    MongoDB__ConnectionString=secretref:mongo-conn \
+                    MongoDB__DatabaseName=lessenhubdb \
+                    SurfConext__Authority="$SURFCONEXT_AUTHORITY" \
+                    SurfConext__ClientId="$SURFCONEXT_CLIENT_ID" \
+                    SurfConext__ClientSecret=secretref:surf-client-secret \
+                  --only-show-errors
+              else
+                az containerapp update \
+                  --name "$AZURE_CONTAINER_APP" \
+                  --resource-group "$AZURE_RG" \
+                  --image "$BACKEND_IMAGE_NAME" \
+                  --set-env-vars \
+                    ASPNETCORE_ENVIRONMENT=Production \
+                    ASPNETCORE_URLS=http://+:8080 \
+                    MongoDB__ConnectionString=secretref:mongo-conn \
+                    MongoDB__DatabaseName=lessenhubdb \
+                    SurfConext__Authority="$SURFCONEXT_AUTHORITY" \
+                    SurfConext__ClientId="$SURFCONEXT_CLIENT_ID" \
+                    SurfConext__ClientSecret=secretref:surf-client-secret \
+                  --only-show-errors
+              fi
+            fi
+
+            BACKEND_FQDN="$(az containerapp show -g "$AZURE_RG" -n "$AZURE_CONTAINER_APP" --query properties.configuration.ingress.fqdn -o tsv)"
+            echo "backend_fqdn=$BACKEND_FQDN" >> "$GITHUB_OUTPUT"
+            echo "Backend Container App URL: https://$BACKEND_FQDN"
+
+      - name: Build frontend image
+        run: |
+          BACKEND_URL="https://${{ steps.deploy_backend.outputs.backend_fqdn }}"
+          docker build \
+            -f LessenHub.Frontend/Dockerfile.prod \
+            --build-arg NEXT_PUBLIC_API_URL="$BACKEND_URL" \
+            --build-arg NEXT_PUBLIC_BACKEND_URL="$BACKEND_URL" \
+            -t "$FRONTEND_IMAGE_NAME" .
+
+      - name: Push frontend image
+        run: docker push "$FRONTEND_IMAGE_NAME"
+
+      - name: Deploy frontend Container App
+        id: deploy_frontend
+        uses: azure/cli@v2
+        env:
+          AZURE_RG: ${{ secrets.AZURE_RG }}
+          AZURE_CONTAINERAPPS_ENV: ${{ secrets.AZURE_CONTAINERAPPS_ENV }}
+          AZURE_CONTAINER_APP: ${{ secrets.AZURE_CONTAINER_APP }}
+          AZURE_FRONTEND_CONTAINER_APP: ${{ secrets.AZURE_FRONTEND_CONTAINER_APP }}
+          GHCR_USERNAME: ${{ github.repository_owner }}
+          GHCR_PAT: ${{ secrets.GHCR_PAT }}
+          BACKEND_FQDN: ${{ steps.deploy_backend.outputs.backend_fqdn }}
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            az extension add --name containerapp --upgrade --only-show-errors
+
+            FRONTEND_APP="${AZURE_FRONTEND_CONTAINER_APP:-${AZURE_CONTAINER_APP}-frontend}"
+            BACKEND_URL="https://$BACKEND_FQDN"
+
+            APP_EXISTS="$(az containerapp list -g "$AZURE_RG" --query "[?name=='$FRONTEND_APP'] | length(@)" -o tsv)"
+
+            if [[ "$APP_EXISTS" != "0" ]]; then
+              APP_PROVISIONING_STATE="$(az containerapp show -g "$AZURE_RG" -n "$FRONTEND_APP" --query "properties.provisioningState" -o tsv)"
+              if [[ "$APP_PROVISIONING_STATE" == "Failed" ]]; then
+                az containerapp delete \
+                  --name "$FRONTEND_APP" \
+                  --resource-group "$AZURE_RG" \
+                  --yes \
+                  --only-show-errors
+                APP_EXISTS="0"
+              fi
+            fi
+
+            if [[ "$APP_EXISTS" == "0" ]]; then
+              if [[ -n "${GHCR_PAT:-}" ]]; then
+                az containerapp create \
+                  --name "$FRONTEND_APP" \
+                  --resource-group "$AZURE_RG" \
+                  --environment "$AZURE_CONTAINERAPPS_ENV" \
+                  --image "$FRONTEND_IMAGE_NAME" \
+                  --registry-server ghcr.io \
+                  --registry-username "$GHCR_USERNAME" \
+                  --registry-password "$GHCR_PAT" \
+                  --ingress external \
+                  --target-port 3000 \
+                  --cpu 0.25 \
+                  --memory 0.5Gi \
+                  --min-replicas 0 \
+                  --max-replicas 1 \
+                  --env-vars \
+                    NEXT_PUBLIC_API_URL="$BACKEND_URL" \
+                    NEXT_PUBLIC_BACKEND_URL="$BACKEND_URL" \
+                  --only-show-errors
+              else
+                az containerapp create \
+                  --name "$FRONTEND_APP" \
+                  --resource-group "$AZURE_RG" \
+                  --environment "$AZURE_CONTAINERAPPS_ENV" \
+                  --image "$FRONTEND_IMAGE_NAME" \
+                  --ingress external \
+                  --target-port 3000 \
+                  --cpu 0.25 \
+                  --memory 0.5Gi \
+                  --min-replicas 0 \
+                  --max-replicas 1 \
+                  --env-vars \
+                    NEXT_PUBLIC_API_URL="$BACKEND_URL" \
+                    NEXT_PUBLIC_BACKEND_URL="$BACKEND_URL" \
+                  --only-show-errors
+              fi
+            else
+              if [[ -n "${GHCR_PAT:-}" ]]; then
+                az containerapp registry set \
+                  --name "$FRONTEND_APP" \
+                  --resource-group "$AZURE_RG" \
+                  --server ghcr.io \
+                  --username "$GHCR_USERNAME" \
+                  --password "$GHCR_PAT" \
+                  --only-show-errors
+
+                az containerapp update \
+                  --name "$FRONTEND_APP" \
+                  --resource-group "$AZURE_RG" \
+                  --image "$FRONTEND_IMAGE_NAME" \
+                  --set-env-vars \
+                    NEXT_PUBLIC_API_URL="$BACKEND_URL" \
+                    NEXT_PUBLIC_BACKEND_URL="$BACKEND_URL" \
+                  --only-show-errors
+              else
+                az containerapp update \
+                  --name "$FRONTEND_APP" \
+                  --resource-group "$AZURE_RG" \
+                  --image "$FRONTEND_IMAGE_NAME" \
+                  --set-env-vars \
+                    NEXT_PUBLIC_API_URL="$BACKEND_URL" \
+                    NEXT_PUBLIC_BACKEND_URL="$BACKEND_URL" \
+                  --only-show-errors
+              fi
+            fi
+
+            FRONTEND_FQDN="$(az containerapp show -g "$AZURE_RG" -n "$FRONTEND_APP" --query properties.configuration.ingress.fqdn -o tsv)"
+            echo "frontend_fqdn=$FRONTEND_FQDN" >> "$GITHUB_OUTPUT"
+            echo "Frontend Container App URL: https://$FRONTEND_FQDN"
+
+      - name: Update backend frontend URL
+        uses: azure/cli@v2
+        env:
+          AZURE_RG: ${{ secrets.AZURE_RG }}
+          AZURE_CONTAINER_APP: ${{ secrets.AZURE_CONTAINER_APP }}
+          FRONTEND_FQDN: ${{ steps.deploy_frontend.outputs.frontend_fqdn }}
+          FRONTEND_PUBLIC_URL: ${{ secrets.FRONTEND_PUBLIC_URL }}
+        with:
+          inlineScript: |
+            set -euo pipefail
+
+            az extension add --name containerapp --upgrade --only-show-errors
+
+            FRONTEND_BASE_URL="https://$FRONTEND_FQDN"
+            if [[ -n "${FRONTEND_PUBLIC_URL:-}" ]]; then
+              FRONTEND_BASE_URL="$FRONTEND_PUBLIC_URL"
+            fi
+
+            az containerapp update \
+              --name "$AZURE_CONTAINER_APP" \
+              --resource-group "$AZURE_RG" \
+              --set-env-vars Frontend__Url="$FRONTEND_BASE_URL" \
+              --only-show-errors
+
+            echo "Backend configured with frontend URL: $FRONTEND_BASE_URL"
